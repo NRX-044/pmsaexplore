@@ -10,6 +10,7 @@
 
 	<!-- Load plotly.js into the DOM -->
 	<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+	<!-- <script src='./plotly-2.12.1.unmin.js'></script> -->
 	<!--<script src="https://biowasm.com/cdn/v3/aioli.js"></script> -->
 	<!--<script src='plotly-2.12.1.min.js'></script> -->
 
@@ -556,6 +557,12 @@ function get_msa_pos_by_residue_pos(residue_pos, msa_seq){
 	}	
 	return msa_pos_1based;
 }
+
+// reverse
+function get_residue_pos_by_msa_pos(msa_pos,msa_seq) {
+	var v = 2;
+}
+
 
 // 读取上传的本地pdb文件
 async function read_pdb_file(event) {
@@ -1357,16 +1364,33 @@ function plot_msa(plot_regions_flag, plot_second_struct_flag, btn, btn_raw_value
 		// curveNumber: 从0开始的整数，表示图右上角的legend图例，比如图例中有3个，即取0和1和2;
 		// x: x轴坐标值;
 		// name: lengend中的名字
-  	 	console.log("curveNumber="+points.curveNumber+"; pointNum="+pointNum+";x="+points.x+";y="+points.y);
-
+  	console.log("curveNumber="+points.curveNumber+"; pointNum="+pointNum+";x="+points.x+";y="+points.y);
+	var template_id = document.getElementById("templateid-select").value;
+	if (points.curveNumber != document.getElementById('myDiv').data.length-1){
+		// highlight annotated region
+		console.log("curveNumber="+points.curveNumber+"; customdata="+points.customdata);
+		var full_rginfo = points.customdata.split(':')[0];
+		console.log(full_rginfo);
+		var full_coor = full_rginfo.split(' ')[full_rginfo.split(' ').length-1];
+		var seq_id = full_rginfo.replace(full_coor,'').trim();
+		if(seq_id===template_id){
+			var start_x = parseInt(full_coor.split('->')[0]),
+				end_x = parseInt(full_coor.split('->')[1]);
+			console.log("高亮"+start_x+"-"+end_x+"aa");
+			window.viewerInstance.visual.select({ data: [{ struct_asym_id: 'A', start_residue_number: start_x,end_residue_number:
+		end_x, color:{r:255,g:255,b:0},focus:false}]});
+		}else{
+			console.log('region of non-template seq selected !')
+			//TODO tranform non-template region coor to template region coor
+		}
+		
+	}else{
 		// msa 坐标转为模板的坐标
-		var template_id = document.getElementById("templateid-select").value;
-		var template_highlight_x = window.msa[template_id].slice(0, points.x).replaceAll("-", "").length;
+		var template_highlight_x = window.msa[template_id].slice(0, points.x+1).replaceAll("-", "").length;
 		console.log("模板"+template_id+" 高亮第"+template_highlight_x+"aa");
-
 		// hightlign高亮 pdbe-molstart 
 		window.viewerInstance.visual.select({ data: [{ struct_asym_id: 'A', start_residue_number: template_highlight_x, end_residue_number: template_highlight_x, color:{r:255,g:255,b:0}, focus: false }]}); // 高亮 chain A上的某个区域。
-		
+	}	
 	});
 
 
@@ -2270,7 +2294,7 @@ function get_regions(region_id){
 		}
 
 		
-		rgs_dict[seq_id]['customdata'].push(s+"->"+e+": "+info);
+		rgs_dict[seq_id]['customdata'].push(seq_id+" "+s+"->"+e+": "+info);
 		if(s == 0 || e == 0){
 			alert("位置信息是1-based，不允许start 或 end 为0~");
 			error_flag = true;
